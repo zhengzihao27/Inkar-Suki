@@ -12,7 +12,14 @@ from src.utils.database import attribute_db as db
 from src.utils.database.classes import PlayerEquipsCache
 from src.utils.database.tabs import read_tab
 from src.utils.network import Request
-from src.utils.analyze import R, TuilanData, merge_dicts, parse_luatable, parse_skillevent
+from src.utils.analyze import (
+    R,
+    TuilanData,
+    merge_dicts,
+    parse_jcl_player_table,
+    parse_luatable,
+    parse_skillevent,
+)
 from src.utils.exceptions import TabFileMissException
 from src.utils.database.constant import (
     A, B, C,
@@ -1126,7 +1133,8 @@ class JX3PlayerAttribute:
             url = read(CONST + "/cache/attribute.txt")
             params = {
                 "server": server,
-                "name": name
+                "name": name,
+                "format": "client"
             }
             try:
                 raw_data = (await Request(url, params=params).get()).json()
@@ -1152,14 +1160,14 @@ class JX3PlayerAttribute:
             
             diamonds = []
 
-            for each_diamond in each_equip.get("aMountDiamond", []):
+            for each_diamond in each_equip.get("aSlotItem", []):
                 diamonds.append(
                     each_diamond
                 )
             
             if position_id == 0:
-                diamonds.append(
-                    each_equip["aColorDiamond"]
+                diamonds.extend(
+                    each_equip["ColorInfo"]
                 )
 
             permanent_enchant_id = each_equip["dwPermanentEnchantID"]
@@ -1182,7 +1190,8 @@ class JX3PlayerAttribute:
             results,
             [],
             int(raw_data["detail"]["kungfuId"]),
-            int(raw_data["detail"]["globalId"])
+            int(raw_data["detail"]["globalId"]),
+            timestamp=int(raw_data["detail"]["cacheTime"])
         )
         try:
             instance.save()
@@ -1219,7 +1228,7 @@ class JX3PlayerAttribute:
         if lua_table[7]:
             global_role_id = int(lua_table[7])
         else:
-            global_role_id = 1145141919810
+            global_role_id = 0
         result = cls(
             equips_lines, talents_lines,
             cast(int, Kungfu.with_internel_id(int(lua_table[3]), True).id),
@@ -1317,7 +1326,7 @@ class JX3PlayerAttribute:
             for expected_global_role_id, player_line in player_lines.items():
                 lua_table_raw, timestamp = player_line
                 try:
-                    lua_table = cast(list, parse_luatable(lua_table_raw))
+                    lua_table = parse_jcl_player_table(lua_table_raw)
                     if len(lua_table) < 8:
                         continue
                     global_role_id = int(lua_table[7])
@@ -1392,7 +1401,8 @@ class JX3PlayerAttribute:
                 each_equip.kungfu_id,
                 each_equip.global_role_id,
                 each_equip.timestamp,
-                each_equip.tag
+                each_equip.tag,
+                database_id=each_equip.id,
             )
             try:
                 instance.validate()
@@ -1446,18 +1456,20 @@ class JX3PlayerAttribute:
             talents_lines: list[int],
             kungfu_id: int,
             global_role_id: int,
-            timestamp: int = Time().raw_time,
+            timestamp: int = 0,
             equip_tag: str = "",
-            name: str = ""
+            name: str = "",
+            database_id: int | None = None,
         ):
         Equip.purge()
         self.equip_lines = equips_lines
         self.talents_lines = talents_lines
         self.kungfu_id = normalize_kungfu_id(kungfu_id)
         self.global_role_id = global_role_id
-        self.timestamp = timestamp
+        self.timestamp = timestamp if timestamp else Time().raw_time
         self.tag = equip_tag
         self.name = name
+        self.database_id = database_id
 
     def validate(self) -> None:
         if not self.equips:
@@ -1528,7 +1540,7 @@ class JX3PlayerAttribute:
             basic_attr = merge_dicts(basic_attr, set_attr)
         return FinalAttr(cast(dict[str, int], basic_attr), self.kungfu_id).output_attr()
 
-    def save(self):
+    def save(self, *, only_if_newer: bool = False) -> bool:
         pretags = {
             "PVE": 0,
             "PVP": 0,
@@ -1543,8 +1555,43 @@ class JX3PlayerAttribute:
                 else:
                     pretags["PVE"] += 1
             self.tag = max(pretags, key=lambda k: pretags[k])
-        exist_same_tag_equip = cast(PlayerEquipsCache | None, db.where_one(PlayerEquipsCache(), "global_role_id = ? AND tag = ? AND kungfu_id = ?", self.global_role_id, self.tag, self.kungfu_id, default=None))
+        if self.database_id is not None:
+            exist_same_tag_equip = cast(
+                PlayerEquipsCache | None,
+                db.where_one(
+                    PlayerEquipsCache(),
+                    "id = ?",
+                    self.database_id,
+                    default=None,
+                ),
+            )
+            same_tag_equips = (
+                [exist_same_tag_equip]
+                if exist_same_tag_equip is not None
+                else []
+            )
+        else:
+            same_tag_equips = cast(
+                list[PlayerEquipsCache],
+                db.where_all(
+                    PlayerEquipsCache(),
+                    "global_role_id = ? AND tag = ? AND kungfu_id = ?",
+                    self.global_role_id,
+                    self.tag,
+                    self.kungfu_id,
+                    default=[],
+                ) or [],
+            )
+            exist_same_tag_equip = (
+                max(same_tag_equips, key=lambda equip: equip.timestamp)
+                if same_tag_equips
+                else None
+            )
         if exist_same_tag_equip is not None:
+            if only_if_newer and any(
+                equip.timestamp >= self.timestamp for equip in same_tag_equips
+            ):
+                return False
             exist_same_tag_equip.equips_data = self.equip_lines
             exist_same_tag_equip.global_role_id = self.global_role_id
             exist_same_tag_equip.kungfu_id = self.kungfu_id
@@ -1561,3 +1608,4 @@ class JX3PlayerAttribute:
                 timestamp = self.timestamp
             )
         db.save(exist_same_tag_equip)
+        return True
