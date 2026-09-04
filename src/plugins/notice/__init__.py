@@ -1,7 +1,7 @@
 from typing import Any
 from random import randint
 
-from nonebot import on_notice, on_command, on_request
+from nonebot import on_notice, on_request
 from nonebot.adapters.onebot.v11 import (
     Bot, 
     Message,
@@ -16,6 +16,7 @@ from nonebot.adapters.onebot.v11 import (
 from nonebot.params import CommandArg
 
 from src.config import Config
+from src.utils.command import on_command
 from src.utils.network import Request
 from src.utils.permission import check_permission, denied
 from src.utils.database import db
@@ -120,7 +121,7 @@ async def _(bot: Bot, event: GroupRequestEvent):
         await bot.call_api("send_group_msg", group_id=int(notice_to[str(event.self_id)]), message=msg)
 
 
-WelcomeEditMatcher = on_command("welcome", aliases={"修改欢迎语"}, force_whitespace=True, priority=5)
+WelcomeEditMatcher = on_command("welcome", command_key=None, aliases={"修改欢迎语"}, force_whitespace=True, priority=5)
 
 @WelcomeEditMatcher.handle()
 async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):

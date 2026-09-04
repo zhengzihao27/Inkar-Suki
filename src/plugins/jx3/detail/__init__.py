@@ -1,4 +1,3 @@
-from nonebot import on_command
 from nonebot.adapters.onebot.v11 import (
     GroupMessageEvent,
     Message,
@@ -9,12 +8,13 @@ from nonebot.typing import T_State
 
 from src.const.jx3.server import Server
 from src.const.prompts import PROMPT
+from src.utils.command import on_command
 from src.utils.database.player import search_player
 
 from .detail import VIEW_TYPES, get_exp_info
 
 
-achievement_overview_matcher = on_command("jx3_exp", aliases={"资历分布"}, priority=5, force_whitespace=True)
+achievement_overview_matcher = on_command("jx3_exp", command_key="成就", aliases={"资历分布"}, priority=5, force_whitespace=True)
 
 
 @achievement_overview_matcher.handle()

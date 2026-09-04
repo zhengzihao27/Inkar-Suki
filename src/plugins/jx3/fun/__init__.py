@@ -1,5 +1,4 @@
 from typing import Literal
-from nonebot import on_command
 from nonebot.params import CommandArg, RawCommand
 from nonebot.adapters.onebot.v11 import Bot, Message, GroupMessageEvent, MessageSegment as ms
 
@@ -8,6 +7,7 @@ from src.const.jx3.school import School
 from src.const.jx3.server import Server
 from src.config import Config
 from src.const.prompts import PROMPT
+from src.utils.command import on_command
 from src.utils.analyze import check_number
 from src.utils.network import Request
 from src.plugins.preferences.app import Preference
@@ -25,7 +25,7 @@ from .random_5gimage import (
 
 RANDOM_5GIMAGE_COST = 10
 
-saohua_matcher = on_command("jx3_random", aliases={"骚话", "烧话"}, force_whitespace=True, priority=5)
+saohua_matcher = on_command("jx3_random", command_key="骚话", aliases={"骚话", "烧话"}, force_whitespace=True, priority=5)
 
 @saohua_matcher.handle()
 async def jx3_saohua_random(args: Message = CommandArg()):
@@ -41,7 +41,7 @@ async def jx3_saohua_random(args: Message = CommandArg()):
     msg = info["data"]["text"]
     await saohua_matcher.finish(msg)
 
-tiangou_matcher = on_command("jx3_tiangou", aliases={"舔狗", "舔狗日记"}, force_whitespace=True, priority=5)
+tiangou_matcher = on_command("jx3_tiangou", command_key="骚话", aliases={"舔狗", "舔狗日记"}, force_whitespace=True, priority=5)
 
 @tiangou_matcher.handle()
 async def jx3_saohua_tiangou(args: Message = CommandArg()):
@@ -57,10 +57,20 @@ async def jx3_saohua_tiangou(args: Message = CommandArg()):
     msg = info["data"]["text"]
     await tiangou_matcher.finish(msg)
 
-random_loot_matcher = on_command("jx3_rdloot", aliases={"黑本", "模拟掉落", "红本"}, force_whitespace=True, priority=5)
+random_loot_matcher = on_command(
+    "jx3_rdloot",
+    command_key="黑本",
+    aliases={"黑本", "模拟掉落", "红本", "金本"},
+    force_whitespace=True,
+    priority=5,
+)
 
 @random_loot_matcher.handle()
-async def _(event: GroupMessageEvent, args: Message = CommandArg()):
+async def _(
+    event: GroupMessageEvent,
+    args: Message = CommandArg(),
+    cmd: str = RawCommand(),
+):
     msg = args.extract_plain_text()
     if msg == "":
         await random_loot_matcher.finish(PROMPT.ArgumentCountInvalid + "\n参考格式：黑本 <副本名> <难度>")
@@ -74,10 +84,14 @@ async def _(event: GroupMessageEvent, args: Message = CommandArg()):
         await random_loot_matcher.finish(PROMPT.DungeonInvalid)
     else:
         display_mode = Preference(event.user_id, "", "").setting("黑本显示")
-        image = await instance.generate(display_mode=display_mode)
+        probability_multipliers = {"红本": 2, "金本": 100}
+        image = await instance.generate(
+            display_mode=display_mode,
+            probability_multiplier=probability_multipliers.get(cmd, 1),
+        )
         await random_loot_matcher.finish(ms.at(event.user_id) + image)
 
-random_5gimage_matcher = on_command("jx3_random_5gimage", aliases={"随机5G图", "随机5g图", "随机武技图"}, priority=5, force_whitespace=True)
+random_5gimage_matcher = on_command("jx3_random_5gimage", command_key="随机武技图", aliases={"随机5G图", "随机5g图", "随机武技图"}, priority=5, force_whitespace=True)
 
 @random_5gimage_matcher.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg()):
@@ -111,7 +125,7 @@ async def _(event: GroupMessageEvent, args: Message = CommandArg()):
         account.add_coin(RANDOM_5GIMAGE_COST)
     await random_5gimage_matcher.finish(ms.at(event.user_id) + image)
 
-random_5gimage_record_matcher = on_command("jx3_5gimage_record", aliases={"开图记录", "开图战绩"}, priority=5, force_whitespace=True)
+random_5gimage_record_matcher = on_command("jx3_5gimage_record", command_key="随机武技图", aliases={"开图记录", "开图战绩"}, priority=5, force_whitespace=True)
 
 @random_5gimage_record_matcher.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg()):
@@ -123,7 +137,7 @@ async def _(event: GroupMessageEvent, args: Message = CommandArg()):
     )
     await random_5gimage_record_matcher.finish(ms.at(event.user_id) + image)
 
-random_5gimage_rank_matcher = on_command("jx3_5gimage_rank", aliases={"开图排行"}, priority=5, force_whitespace=True)
+random_5gimage_rank_matcher = on_command("jx3_5gimage_rank", command_key="随机武技图", aliases={"开图排行"}, priority=5, force_whitespace=True)
 
 @random_5gimage_rank_matcher.handle()
 async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
@@ -133,7 +147,7 @@ async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     image = await get_random_5gimage_rank_image(bot, int(event.group_id), rank_type)
     await random_5gimage_rank_matcher.finish(ms.at(event.user_id) + image)
 
-random_shilian_matcher = on_command("jx3_rdsl", aliases={"翻牌", "模拟试炼"}, priority=5, force_whitespace=True)
+random_shilian_matcher = on_command("jx3_rdsl", command_key="翻牌", aliases={"翻牌", "模拟试炼"}, priority=5, force_whitespace=True)
 
 @random_shilian_matcher.handle()
 async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
@@ -148,7 +162,7 @@ async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     image = await generate_shilian_box(int(level), int(order), event.group_id, bot)
     await random_loot_matcher.finish(ms.at(event.user_id) + image)
 
-random_serendipity_matcher = on_command("jx3_rdsp", aliases={"抽奇遇", "模拟奇遇"}, priority=5, force_whitespace=True)
+random_serendipity_matcher = on_command("jx3_rdsp", command_key="抽奇遇", aliases={"抽奇遇", "模拟奇遇"}, priority=5, force_whitespace=True)
 
 @random_serendipity_matcher.handle()
 async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
@@ -167,7 +181,7 @@ async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     image = get_serendipity_image(serendipity_path)
     await random_serendipity_matcher.finish(ms.at(event.user_id) + image)
 
-random_equip_matcher = on_command("jx3_randomequip", aliases={"抽防具", "抽首饰", "抽武器", "抽装备"}, priority=5)
+random_equip_matcher = on_command("jx3_randomequip", command_key="抽装备", aliases={"抽防具", "抽首饰", "抽武器", "抽装备"}, priority=5)
 
 @random_equip_matcher.handle()
 async def _(event: GroupMessageEvent, args: Message = CommandArg(), cmd: str = RawCommand()):

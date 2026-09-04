@@ -1,4 +1,3 @@
-from nonebot import on_command
 from nonebot.params import CommandArg
 from nonebot.adapters.onebot.v11 import (
     Message,
@@ -8,11 +7,12 @@ from nonebot.adapters.onebot.v11 import (
 from src.config import Config
 from src.const.jx3.server import Server
 from src.const.prompts import PROMPT
+from src.utils.command import on_command
 from src.utils.database.operation import get_group_settings
 
 from .api import get_recruit_image
 
-recruit_matcher = on_command("jx3_recruit", aliases={"招募"}, force_whitespace=True, priority=5)
+recruit_matcher = on_command("jx3_recruit", command_key="招募", aliases={"招募"}, force_whitespace=True, priority=5)
 
 @recruit_matcher.handle()
 async def _(event: GroupMessageEvent, full_argument: Message = CommandArg()):

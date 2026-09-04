@@ -1,16 +1,16 @@
-from nonebot import on_command
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message
 from nonebot.params import CommandArg
 
 from src.config import Config
 from src.const.jx3.server import Server
 from src.const.prompts import PROMPT
+from src.utils.command import on_command
 from src.utils.permission import check_group_permission
 
 from .api import get_chat_records
 
 
-chat_records_matcher = on_command("jx3_chat_records", aliases={"聊天", "发言"}, force_whitespace=True, priority=5)
+chat_records_matcher = on_command("jx3_chat_records", command_key="聊天", aliases={"聊天", "发言"}, force_whitespace=True, priority=5)
 
 
 @chat_records_matcher.handle()

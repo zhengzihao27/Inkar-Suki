@@ -1,13 +1,13 @@
-from nonebot import on_command
 from nonebot.params import CommandArg
 from nonebot.adapters.onebot.v11 import Bot, Message, GroupMessageEvent
 
 from src.const.prompts import PROMPT
 from src.const.jx3.server import Server
+from src.utils.command import on_command
 
 from .api import get_arena_record
 
-arena_record_matcher = on_command("jx3_arena_record", aliases={"战绩"}, force_whitespace=True, priority=5)
+arena_record_matcher = on_command("jx3_arena_record", command_key="战绩", aliases={"战绩"}, force_whitespace=True, priority=5)
 
 @arena_record_matcher.handle()
 async def _(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):

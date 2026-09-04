@@ -1,16 +1,16 @@
-from nonebot import on_command
 from nonebot.params import CommandArg, Arg
 from nonebot.typing import T_State
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message
 
 from src.const.prompts import PROMPT
 from src.const.jx3.server import Server
+from src.utils.command import on_command
 from src.utils.analyze import check_number
 from src.utils.network import Request
 
 from .processer import get_item_data, JX3CostCalc
 
-cost_calc_matcher = on_command("成本", priority=5, force_whitespace=True)
+cost_calc_matcher = on_command("成本", command_key="成本", priority=5, force_whitespace=True)
 
 @cost_calc_matcher.handle()
 async def _(event: GroupMessageEvent, state: T_State, argument: Message = CommandArg()):

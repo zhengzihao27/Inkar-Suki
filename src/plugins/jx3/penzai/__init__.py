@@ -1,16 +1,16 @@
-from nonebot import on_command
 from nonebot.params import CommandArg, Arg
 from nonebot.typing import T_State
 from nonebot.matcher import Matcher
 from nonebot.adapters.onebot.v11 import Message, GroupMessageEvent, MessageSegment as ms
 
+from src.utils.command import on_command
 from src.utils.analyze import check_number
 from src.const.prompts import PROMPT
 
 from .dh import get_dh
 from .wg import get_wg
 
-dunhao_matcher = on_command("jx3_dh", aliases={"蹲号"}, force_whitespace=True, priority=5)
+dunhao_matcher = on_command("jx3_dh", command_key="物价", aliases={"蹲号"}, force_whitespace=True, priority=5)
 
 @dunhao_matcher.handle()
 async def _(event: GroupMessageEvent, matcher: Matcher, state: T_State, args: Message = CommandArg()):
@@ -47,7 +47,7 @@ async def _(event: GroupMessageEvent, state: T_State, num: Message = Arg()):
         floor = str(floors[int(num_)-1])
         await dunhao_matcher.finish(links[int(num_)-1] + f"\n请前往{floor}楼哦~")
 
-waiguan_matcher = on_command("jx3_wg", aliases={"贴吧物价"}, force_whitespace=True, priority=5)
+waiguan_matcher = on_command("jx3_wg", command_key="物价", aliases={"贴吧物价"}, force_whitespace=True, priority=5)
 
 @waiguan_matcher.handle()
 async def _(event: GroupMessageEvent, matcher: Matcher, state: T_State, args: Message = CommandArg()):

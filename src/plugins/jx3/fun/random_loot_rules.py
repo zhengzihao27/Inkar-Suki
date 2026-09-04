@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 
 CHALLENGE_DUNGEONS = {
@@ -25,7 +25,7 @@ class LootProbabilities:
     general_brand: int = 40
     weapon: int = 10
     jingjian: int = 10
-    xuanjing: int = 1
+    xuanjing: int = 4
     sand_material: int = 30
     other_peerless: int = 5
     appearance: int = 5
@@ -34,6 +34,12 @@ class LootProbabilities:
     challenge_treasure_replacement: int = 20
     weapon_box_replacement: int = 20
     final_boss_box: int = 20
+
+    def scaled(self, multiplier: int) -> "LootProbabilities":
+        return LootProbabilities(**{
+            field.name: min(getattr(self, field.name) * multiplier, 100)
+            for field in fields(self)
+        })
 
 # 作弊工具
 # @dataclass(frozen=True)
